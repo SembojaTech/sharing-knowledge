@@ -6,13 +6,13 @@ provider:
   name: aws
   runtime: nodejs20.x
   stage: ${opt:stage, 'dev'}
-  region: ap-southeast-3
+  region: ap-southeast-1
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   deploymentBucket:
     name: ${self:service}-${sls:stage}
   environment:
-    SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-3:000000000000:MyLocalNestJSSNSTopic
+    SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-1:000000000000:MyLocalNestJSSNSTopic
 
 functions:
   main:
@@ -26,6 +26,7 @@ functions:
           path: /
 
 plugins:
+  - serverless-deployment-bucket
   - serverless-offline
   - serverless-plugin-optimize
   - serverless-dotenv-plugin # Optional: if you use .env files for local development
@@ -37,7 +38,7 @@ custom:
     sns: true
   sns:
     endpoint: http://localhost:4566
-    region: ap-southeast-3
+    region: ap-southeast-1
   optimize:
     external: ['aws-sdk'] # aws-sdk is available in the Lambda environment
   dotenv:

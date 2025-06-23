@@ -22,6 +22,7 @@ export class SnsService {
 
     this.sns = new SNSClient(snsConfig);
     this.snsTopicArn = process.env.SNS_TOPIC_ARN;
+    console.log('this.snsTopicArn', this.snsTopicArn);
 
     if (!this.snsTopicArn) {
       console.warn('SNS_TOPIC_ARN is not set. SNS publishing will not work.');
