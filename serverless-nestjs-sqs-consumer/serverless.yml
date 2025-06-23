@@ -1,0 +1,40 @@
+service: serverless-nestjs-sqs-consumer
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  stage: ${opt:stage, 'dev'}
+  region: ap-southeast-3
+  memorySize: 128
+  timeout: 30
+  environment:
+    SQS_QUEUE_URL: ${env:SQS_QUEUE_URL}
+  deploymentBucket:
+    name: ${self:service}-${sls:stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource: ${env:SQS_QUEUE_ARN}
+
+plugins:
+  - serverless-offline
+  - serverless-plugin-optimize
+  - serverless-webpack
+package:
+  individually: true
+
+functions:
+  consumeSqsMessages:
+    handler: dist/main.handler
+    events:
+      - sqs:
+          arn: ${env:SQS_QUEUE_ARN}
+          batchSize: 10
+          enabled: true
