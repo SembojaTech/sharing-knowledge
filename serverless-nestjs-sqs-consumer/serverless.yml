@@ -1,16 +1,17 @@
 service: serverless-nestjs-sqs-consumer
 
-frameworkVersion: '3'
+frameworkVersion: '4'
 
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: nodejs20.x
   stage: ${opt:stage, 'dev'}
-  region: ap-southeast-3
+  region: ap-southeast-1
   memorySize: 128
   timeout: 30
   environment:
-    SQS_QUEUE_URL: ${env:SQS_QUEUE_URL}
+    SQS_QUEUE_URL: ${env:SQS_QUEUE_URL, 'http://sqs.ap-southeast-1.localhost.localstack.cloud:4566/000000000000/MyLocalNestJSQueue'}
+    SQS_QUEUE_ARN: ${env:SQS_QUEUE_ARN, 'arn:aws:sqs:ap-southeast-1:000000000000:MyLocalNestJSQueue'}
   deploymentBucket:
     name: ${self:service}-${sls:stage}
   iam:
@@ -21,12 +22,13 @@ provider:
             - sqs:ReceiveMessage
             - sqs:DeleteMessage
             - sqs:GetQueueAttributes
-          Resource: ${env:SQS_QUEUE_ARN}
+          Resource: arn:aws:sqs:ap-southeast-1:000000000000:MyLocalNestJSQueue
 
 plugins:
+  - serverless-deployment-bucket
   - serverless-offline
-  - serverless-plugin-optimize
-  - serverless-webpack
+  - serverless-localstack
+
 package:
   individually: true
 
@@ -35,6 +37,20 @@ functions:
     handler: dist/main.handler
     events:
       - sqs:
-          arn: ${env:SQS_QUEUE_ARN}
+          arn: arn:aws:sqs:ap-southeast-1:000000000000:MyLocalNestJSQueue
           batchSize: 10
           enabled: true
+
+custom:
+  serverless-offline:
+    lambdaPort: 5000
+  serverless-offline-aws-proxy:
+    sqs: true
+  dotenv:
+    path: .env.local # Optional: if you use .env files for local development
+  localstack:
+    host: http://localhost:4566
+    edgePort: 4566
+    stages:
+      - dev
+      - local

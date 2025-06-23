@@ -21,7 +21,7 @@ export const handler = async (event: SQSEvent, context: Context) => {
 
   for (const record of event.Records) {
     console.log('Processing SQS message:', record.body);
-    await sqsConsumerService.processMessage(record.body);
+    await sqsConsumerService.processMessage(record.body, record.receiptHandle);
   }
 
   return {

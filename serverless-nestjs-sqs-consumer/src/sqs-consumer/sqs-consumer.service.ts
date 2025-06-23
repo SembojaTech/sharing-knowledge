@@ -7,26 +7,37 @@ export class SqsConsumerService {
   private readonly sqsClient: SQSClient;
 
   constructor() {
-    this.sqsClient = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
+    const isOffline = process.env.IS_OFFLINE === 'true';
+    const sqsConfig: any = {
+      region: process.env.AWS_REGION || 'ap-southeast-1',
+    };
+
+    if (isOffline) {
+      sqsConfig.endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
+      sqsConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'test',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+      };
+    }
+
+    this.sqsClient = new SQSClient(sqsConfig);
   }
 
-  async processMessage(messageBody: string): Promise<void> {
-    this.logger.log(`Received message: ${messageBody}`);
+  async processMessage(messageBody: string, receiptHandle: string): Promise<void> {
+    this.logger.log(`Received message: ${JSON.parse(messageBody)?.Message}`);
     // Implement your message processing logic here
     // For example, parse the message, interact with other services, etc.
 
     try {
-      // Assuming the messageBody contains a receiptHandle for deletion
-      const message = JSON.parse(messageBody);
-      if (message.receiptHandle && process.env.SQS_QUEUE_URL) {
+      if (receiptHandle && process.env.SQS_QUEUE_URL) {
         const deleteCommand = new DeleteMessageCommand({
           QueueUrl: process.env.SQS_QUEUE_URL,
-          ReceiptHandle: message.receiptHandle,
+          ReceiptHandle: receiptHandle,
         });
         await this.sqsClient.send(deleteCommand);
-        this.logger.log(`Message with ReceiptHandle ${message.receiptHandle} deleted from queue.`);
+        this.logger.log(`Message with ReceiptHandle ${receiptHandle} deleted from queue.`);
       } else {
-        this.logger.warn('Message does not contain receiptHandle or SQS_QUEUE_URL is not set. Message not deleted.');
+        this.logger.warn('ReceiptHandle or SQS_QUEUE_URL is not set. Message not deleted.');
       }
     } catch (error) {
       this.logger.error(`Error processing message: ${error.message}`, error.stack);
