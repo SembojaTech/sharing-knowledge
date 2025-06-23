@@ -7,11 +7,15 @@ export class SnsController {
 
   @Post('publish')
   @HttpCode(HttpStatus.OK)
-  async publishMessage(@Body('message') message: string, @Body('subject') subject?: string) {
+  async publishMessage(
+    @Body('message') message: string,
+    @Body('subject') subject?: string,
+    @Body('topicArn') topicArn?: string,
+  ) {
     if (!message) {
       return { success: false, message: 'Message body is required.' };
     }
-    const result = await this.snsService.publishMessage(message, subject);
+    const result = await this.snsService.publishMessage(message, subject, topicArn);
     return result;
   }
 }

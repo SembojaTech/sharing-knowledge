@@ -4,7 +4,6 @@ import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 @Injectable()
 export class SnsService {
   private readonly sns: SNSClient;
-  private readonly snsTopicArn: string;
 
   constructor() {
     const isOffline = process.env.IS_OFFLINE === 'true';
@@ -21,23 +20,22 @@ export class SnsService {
     }
 
     this.sns = new SNSClient(snsConfig);
-    this.snsTopicArn = process.env.SNS_TOPIC_ARN;
-    console.log('this.snsTopicArn', this.snsTopicArn);
-
-    if (!this.snsTopicArn) {
-      console.warn('SNS_TOPIC_ARN is not set. SNS publishing will not work.');
+    if (!process.env.SNS_TOPIC_ARN) {
+      console.warn('Default SNS_TOPIC_ARN is not set. Messages without an explicit topic ARN may not be published.');
     }
   }
 
-  async publishMessage(message: string, subject: string = 'NestJS SNS Message'): Promise<any> {
-    if (!this.snsTopicArn) {
-      console.error('SNS_TOPIC_ARN is not configured. Cannot publish message.');
+  async publishMessage(message: string, subject: string = 'NestJS SNS Message', topicArn?: string): Promise<any> {
+    const targetTopicArn = topicArn || process.env.SNS_TOPIC_ARN;
+
+    if (!targetTopicArn) {
+      console.error('No SNS Topic ARN provided or configured. Cannot publish message.');
       return { success: false, message: 'SNS Topic ARN not configured' };
     }
 
     const params = {
       Message: message,
-      TopicArn: this.snsTopicArn,
+      TopicArn: targetTopicArn,
       Subject: subject,
     };
 
