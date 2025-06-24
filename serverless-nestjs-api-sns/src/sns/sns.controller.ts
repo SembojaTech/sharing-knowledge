@@ -15,6 +15,7 @@ export class SnsController {
     if (!message) {
       return { success: false, message: 'Message body is required.' };
     }
+    console.info('Topic:', topicArn);
     const result = await this.snsService.publishMessage(message, subject, topicArn);
     return result;
   }

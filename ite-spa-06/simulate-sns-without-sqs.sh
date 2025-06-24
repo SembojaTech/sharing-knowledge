@@ -4,7 +4,7 @@
 COUNT=10
 
 # SNS Topic ARN (replace with your actual topic ARN)
-TOPIC_ARN="arn:aws:sns:ap-southeast-1:000000000000:MyLocalNestJSSNSTopic" # Example topic ARN
+TOPIC_ARN="arn:aws:sns:ap-southeast-1:000000000000:WithoutSQSTopic" # Example topic ARN
 
 # Endpoint
 URL="http://localhost:4000/dev/sns/publish"

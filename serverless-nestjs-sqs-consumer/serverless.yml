@@ -40,6 +40,8 @@ functions:
           arn: arn:aws:sqs:ap-southeast-1:000000000000:MyLocalNestJSQueue
           batchSize: 10
           enabled: true
+      - sns:
+          arn: arn:aws:sns:ap-southeast-1:000000000000:WithoutSQSTopic
 
 custom:
   serverless-offline:
