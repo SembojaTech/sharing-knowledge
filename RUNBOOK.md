@@ -144,7 +144,7 @@ Watch the consumer logs:
 
 ```bash
 aws --endpoint-url http://localhost:4566 logs tail \
-  /aws/lambda/serverless-nestjs-sqs-consumer-dev-consumeSqsMessages --follow
+  /aws/lambda/sqs-consumer-dev-consume --follow
 ```
 
 You should see `Received message: Hello from job N` then `... deleted from queue.`

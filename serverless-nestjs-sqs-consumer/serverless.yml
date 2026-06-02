@@ -1,4 +1,4 @@
-service: serverless-nestjs-sqs-consumer
+service: sqs-consumer
 
 frameworkVersion: '3'
 
@@ -33,7 +33,7 @@ package:
   individually: true
 
 functions:
-  consumeSqsMessages:
+  consume:
     handler: dist/main.handler
     events:
       - sqs:

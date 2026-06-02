@@ -6,6 +6,8 @@
 #   docker compose up -d      # start
 #   docker compose down       # stop + remove
 #
+name: ite-spa-06-demo
+
 services:
   localstack:
     container_name: localstack
