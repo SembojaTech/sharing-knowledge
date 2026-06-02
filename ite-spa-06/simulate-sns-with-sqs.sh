@@ -1,21 +1,24 @@
 #!/bin/bash
-
-# Number of messages to send
-COUNT=10
-
-# SNS Topic ARN (replace with your actual topic ARN)
-TOPIC_ARN="arn:aws:sns:ap-southeast-1:000000000000:WithSQSTopic" # Example topic ARN
-
-# Endpoint
+#
+# WITH SQS path:  producer API -> SNS (WithSQSTopic) -> SQS queue -> consumer Lambda
+# The queue buffers messages, so the consumer can be slow or briefly down without loss.
+#
+COUNT=${1:-10}
+TOPIC_ARN="arn:aws:sns:ap-southeast-1:000000000000:WithSQSTopic"
 URL="http://localhost:4000/dev/sns/publish"
 
-echo "Sending $COUNT curl requests sequentially..."
+echo "==> WITH SQS    API → SNS → [ SQS queue ] → Lambda   (buffered / durable)"
+echo "    topic: WithSQSTopic"
+echo "    sending $COUNT messages to $URL"
+echo
 
-for i in $(seq 1 $COUNT); do
-  echo "Sending message $i..."
-  curl -X POST -H "Content-Type: application/json" \
-    -d "{\"message\": \"Hello from job $i\", \"subject\": \"Test Subject $i\", \"topicArn\": \"$TOPIC_ARN\"}" \
-    "$URL" &> /dev/null # Suppress curl output to keep terminal clean, or remove &> /dev/null to see it
+for i in $(seq 1 "$COUNT"); do
+  resp=$(curl -s -X POST -H "Content-Type: application/json" \
+    -d "{\"message\": \"Hello from job $i\", \"subject\": \"With-SQS $i\", \"topicArn\": \"$TOPIC_ARN\"}" \
+    "$URL")
+  mid=$(printf '%s' "$resp" | jq -r '.messageId // "FAILED"' 2>/dev/null || echo "FAILED")
+  printf "  msg %2d  →  SNS MessageId %s\n" "$i" "$mid"
 done
 
-echo "All requests sent."
+echo
+echo "==> sent. Watch ./ite-spa-06/watch.sh: messages land in the queue, then the Lambda drains it."

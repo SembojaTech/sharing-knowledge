@@ -198,6 +198,8 @@ To recreate resources without restarting LocalStack, just re-run `./bootstrap.sh
 | `InvalidClientTokenId: security token is invalid` | Missing dummy creds — ensure `.env.local` exists (re-run `./bootstrap.sh`). |
 | `TypeError: ee.on is not a function` on producer start | Running Node 23+. Switch to Node 20: `nvm use` (picks up `.nvmrc`). |
 | Consumer never fires | `serverless offline` does **not** trigger SQS/SNS — you must `serverless deploy` (step 3b). |
+| Messages stuck in queue, Lambda container stuck in `Created`, no logs | NestJS cold-start exceeds LocalStack's Lambda init timeout. `docker-compose.yml` sets `LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=90` to fix this — make sure you're on the current compose file and restarted. |
+| Lambda runs but no CloudWatch logs / empty `watch.sh` activity | Do not set `LAMBDA_KEEPALIVE_MS=0` — immediate teardown races log shipping. Use the default keep-warm. |
 | `License activation failed` / `LocalStack requires an account to run` | 2026.x account gate. Use the pinned community image instead: `docker compose up -d` (step 2a). No token needed for SNS/SQS/Lambda. |
 | Region mismatch warnings | Producer code defaults to `ap-southeast-3` but the ARNs/scripts use `ap-southeast-1`; `.env.local` pins `ap-southeast-1`. Keep everything on `ap-southeast-1`. |
 

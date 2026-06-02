@@ -18,10 +18,16 @@ services:
       # No SERVICES restriction: `serverless deploy` needs cloudformation, s3, iam
       # and logs in addition to sns/sqs/lambda. LocalStack starts them lazily.
       - DEBUG=0
-      # Tear down the Lambda execution container immediately after each invoke
-      # instead of keeping it warm, so it does not linger in `docker ps`.
-      # (LocalStack auto-names that container localstack-lambda-<fn>-<hash>; the
-      #  hash is internal and cannot be renamed — this just stops it persisting.)
-      - LAMBDA_KEEPALIVE_MS=0
+      # NOTE: do NOT set LAMBDA_KEEPALIVE_MS=0 here. Tearing the Lambda container
+      # down immediately races with CloudWatch log shipping, so the function's
+      # logs never appear — which breaks the demo's Lambda activity view
+      # (ite-spa-06/watch.sh) and the only proof the without-SQS path ran.
+      # The default keep-warm behaviour is intentional. The container is named
+      # localstack-lambda-sqs-consumer-dev-consume-<hash> and clears on `down`.
+      #
+      # The consumer is a ~73 MB NestJS bundle; its cold-start boot exceeds the
+      # default 10s Lambda init timeout, leaving containers stuck in "Created"
+      # and messages unprocessed. Give the runtime room to boot:
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=90
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"   # needed for Lambda execution
