@@ -41,7 +41,10 @@ flowchart LR
 Install LocalStack if missing:
 
 ```bash
-pip3 install localstack          # CLI
+# macOS (recommended) — standalone CLI, independent of any Python env:
+brew install localstack/tap/localstack-cli
+# or, cross-platform via pip:
+pip3 install localstack
 # Lambda emulation also needs the Docker image, pulled automatically on first deploy.
 ```
 
