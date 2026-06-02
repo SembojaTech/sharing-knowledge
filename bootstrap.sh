@@ -40,9 +40,11 @@ WRITE_ENV=true
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---- Helpers -----------------------------------------------------------------
-say()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m  !\033[0m %s\n' "$*"; }
+# Log helpers write to stderr so $(...) command substitution captures only the
+# value a function intentionally prints to stdout (e.g. an ARN).
+say()  { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
+ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*" >&2; }
+warn() { printf '\033[1;33m  !\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m  ✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 aws_ls() { aws --endpoint-url "$ENDPOINT" --region "$REGION" "$@"; }
@@ -64,21 +66,23 @@ ok "Queue URL: ${QUEUE_URL}"
 ok "Queue ARN: ${QUEUE_ARN}"
 
 # Allow SNS to deliver into the queue (LocalStack is lenient, but mirror real AWS).
-POLICY=$(cat <<JSON
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {"Service": "sns.amazonaws.com"},
-    "Action": "sqs:SendMessage",
-    "Resource": "${QUEUE_ARN}"
-  }]
-}
-JSON
-)
-aws_ls sqs set-queue-attributes --queue-url "$QUEUE_URL" \
-  --attributes "Policy=$(printf '%s' "$POLICY" | tr -d '\n' | sed 's/"/\\"/g')" >/dev/null 2>&1 \
-  || warn "Could not set queue policy (LocalStack usually does not enforce it — safe to ignore)."
+if command -v jq >/dev/null 2>&1; then
+  POLICY="$(jq -n --arg arn "$QUEUE_ARN" '{
+    Version: "2012-10-17",
+    Statement: [{
+      Effect: "Allow",
+      Principal: {Service: "sns.amazonaws.com"},
+      Action: "sqs:SendMessage",
+      Resource: $arn
+    }]
+  }')"
+  ATTRS="$(jq -n --arg p "$POLICY" '{Policy: $p}')"
+  aws_ls sqs set-queue-attributes --queue-url "$QUEUE_URL" --attributes "$ATTRS" >/dev/null 2>&1 \
+    && ok "Queue policy set (allow SNS sqs:SendMessage)." \
+    || warn "Could not set queue policy (LocalStack does not enforce it — safe to ignore)."
+else
+  warn "jq not found — skipping queue policy (LocalStack does not enforce it)."
+fi
 
 # ---- SNS topics --------------------------------------------------------------
 create_topic() {

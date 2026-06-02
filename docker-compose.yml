@@ -1,0 +1,21 @@
+# LocalStack for the ITE-SPA-06 SNS/SQS demo.
+#
+# Pinned to the 3.x community image, which runs SNS, SQS and Lambda with NO
+# account or auth token (the 2026.x CLI/images require a LocalStack account).
+#
+#   docker compose up -d      # start
+#   docker compose down       # stop + remove
+#
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:3.8.1
+    ports:
+      - "4566:4566"            # edge port (all AWS service APIs)
+    environment:
+      - SERVICES=sns,sqs,lambda
+      - DEBUG=0
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"   # needed for Lambda execution

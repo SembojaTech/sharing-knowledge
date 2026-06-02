@@ -32,21 +32,14 @@ flowchart LR
 
 | Tool | Why | Check |
 |---|---|---|
-| Docker | runs LocalStack (and LocalStack's Lambda) | `docker -v` |
+| Docker | runs LocalStack via the pinned image in `docker-compose.yml` | `docker -v` |
 | Node.js 20+ | runs the NestJS apps | `node -v` |
 | AWS CLI v2 | creates/inspects LocalStack resources | `aws --version` |
-| LocalStack | local AWS emulator | `localstack --version` |
-| `jq` (optional) | nicer output when polling the queue | `jq --version` |
+| `jq` | builds the queue policy in `bootstrap.sh`; nicer queue output | `jq --version` |
 
-Install LocalStack if missing:
-
-```bash
-# macOS (recommended) — standalone CLI, independent of any Python env:
-brew install localstack/tap/localstack-cli
-# or, cross-platform via pip:
-pip3 install localstack
-# Lambda emulation also needs the Docker image, pulled automatically on first deploy.
-```
+No separate LocalStack install is needed — `docker compose up -d` (step 2a) pulls
+the pinned `localstack/localstack:3.8.1` community image, which runs SNS/SQS/Lambda
+with no account or token.
 
 > ℹ️ Both apps run on **Serverless Framework v3** — no login or access key required.
 
@@ -56,11 +49,22 @@ pip3 install localstack
 
 ### 2a. Start LocalStack
 
+This repo ships a `docker-compose.yml` pinned to the **3.8.1 community image**,
+which runs SNS/SQS/Lambda with **no account or auth token** (the 2026.x CLI and
+images now require a LocalStack account — see the note below).
+
 ```bash
-localstack start          # leave this running (foreground), or: localstack start -d
+docker compose up -d      # start (uses docker-compose.yml at the repo root)
+docker compose down       # stop + remove when finished
 ```
 
-Verify: `curl -s http://localhost:4566/_localstack/health | jq .` should list `sns` and `sqs`.
+Verify: `curl -s http://localhost:4566/_localstack/health | jq '.services'` should
+show `sns`, `sqs`, and `lambda` as `available`.
+
+> **Why not `localstack start`?** The Homebrew/`pip` CLI pulls the latest image,
+> which hard-requires a (free) account login. Pinning the `3.8.1` image via Compose
+> avoids that entirely. If you prefer the CLI, create a free account at
+> app.localstack.cloud, run `localstack auth set-token <token>`, then `localstack start`.
 
 ### 2b. Install dependencies (neither app ships `node_modules`)
 
@@ -174,7 +178,7 @@ Each body is the SNS envelope JSON; the original payload is in the `.Message` fi
 ## 6. Teardown
 
 ```bash
-localstack stop          # drops all LocalStack resources (ephemeral by default)
+docker compose down      # stops and removes the container (resources are ephemeral)
 ```
 
 To recreate resources without restarting LocalStack, just re-run `./bootstrap.sh`.
@@ -188,7 +192,7 @@ To recreate resources without restarting LocalStack, just re-run `./bootstrap.sh
 | `InvalidParameterException: Invalid parameter: TopicArn` | Topic not created — run `./bootstrap.sh`; confirm the ARN region is `ap-southeast-1`. |
 | `InvalidClientTokenId: security token is invalid` | Missing dummy creds — ensure `.env.local` exists (re-run `./bootstrap.sh`). |
 | Consumer never fires | `serverless offline` does **not** trigger SQS/SNS — you must `serverless deploy` (step 3b). |
-| `localstack: command not found` | `pip3 install localstack`. |
+| `License activation failed` / `LocalStack requires an account to run` | 2026.x account gate. Use the pinned community image instead: `docker compose up -d` (step 2a). No token needed for SNS/SQS/Lambda. |
 | Region mismatch warnings | Producer code defaults to `ap-southeast-3` but the ARNs/scripts use `ap-southeast-1`; `.env.local` pins `ap-southeast-1`. Keep everything on `ap-southeast-1`. |
 
 See also `serverless-nestjs-api-sns/troubleshooting.md` for the original producer-only notes.
