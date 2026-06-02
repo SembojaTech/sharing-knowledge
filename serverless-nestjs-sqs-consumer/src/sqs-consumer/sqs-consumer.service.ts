@@ -28,6 +28,14 @@ export class SqsConsumerService {
     // Implement your message processing logic here
     // For example, parse the message, interact with other services, etc.
 
+    // Optional artificial delay so the queue drains slowly enough to watch live
+    // during the demo. Set PROCESS_DELAY_MS (e.g. 1500) on the deployed function.
+    const delayMs = Number(process.env.PROCESS_DELAY_MS) || 0;
+    if (delayMs > 0) {
+      this.logger.log(`Simulating ${delayMs}ms of work...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
     try {
       if (receiptHandle && process.env.SQS_QUEUE_URL) {
         const deleteCommand = new DeleteMessageCommand({

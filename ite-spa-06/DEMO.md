@@ -19,6 +19,17 @@ Use **two terminals** side by side (or one projected, one on your laptop):
 > Prereq: LocalStack up, `./bootstrap.sh` run, consumer deployed, producer running on :4000.
 > See `../RUNBOOK.md` steps 2–5.
 
+> **Pacing — slow the drain so the audience can see it.** By default the consumer
+> empties the queue almost instantly. Deploy it with a per-message delay so the
+> bar shrinks visibly:
+> ```bash
+> cd serverless-nestjs-sqs-consumer
+> PROCESS_DELAY_MS=1500 npx serverless deploy      # ~1.5s "work" per message
+> cd ..
+> ```
+> Set `PROCESS_DELAY_MS=0` (or omit) to redeploy at full speed. Keep it ≤ 2500ms:
+> a full batch of 10 must finish within the queue's 30s visibility window.
+
 ---
 
 ## Act 1 — "Both paths work" (≈1 min)
