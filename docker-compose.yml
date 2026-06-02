@@ -13,9 +13,8 @@ services:
     ports:
       - "4566:4566"            # edge port (all AWS service APIs)
     environment:
-      - SERVICES=sns,sqs,lambda
+      # No SERVICES restriction: `serverless deploy` needs cloudformation, s3, iam
+      # and logs in addition to sns/sqs/lambda. LocalStack starts them lazily.
       - DEBUG=0
-      - LAMBDA_EXECUTOR=docker
-      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"   # needed for Lambda execution
