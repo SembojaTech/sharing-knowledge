@@ -18,5 +18,10 @@ services:
       # No SERVICES restriction: `serverless deploy` needs cloudformation, s3, iam
       # and logs in addition to sns/sqs/lambda. LocalStack starts them lazily.
       - DEBUG=0
+      # Tear down the Lambda execution container immediately after each invoke
+      # instead of keeping it warm, so it does not linger in `docker ps`.
+      # (LocalStack auto-names that container localstack-lambda-<fn>-<hash>; the
+      #  hash is internal and cannot be renamed — this just stops it persisting.)
+      - LAMBDA_KEEPALIVE_MS=0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"   # needed for Lambda execution
