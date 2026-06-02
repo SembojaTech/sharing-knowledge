@@ -33,7 +33,7 @@ flowchart LR
 | Tool | Why | Check |
 |---|---|---|
 | Docker | runs LocalStack via the pinned image in `docker-compose.yml` | `docker -v` |
-| Node.js 20+ | runs the NestJS apps | `node -v` |
+| Node.js **20** | runs the NestJS apps (use the `.nvmrc`: `nvm use`) | `node -v` |
 | AWS CLI v2 | creates/inspects LocalStack resources | `aws --version` |
 | `jq` | builds the queue policy in `bootstrap.sh`; nicer queue output | `jq --version` |
 
@@ -42,6 +42,11 @@ the pinned `localstack/localstack:3.8.1` community image, which runs SNS/SQS/Lam
 with no account or token.
 
 > ℹ️ Both apps run on **Serverless Framework v3** — no login or access key required.
+>
+> ⚠️ **Use Node 20.** `serverless offline` crashes on Node 23+ with
+> `TypeError: ee.on is not a function` (the bundled Express 4 stack is incompatible
+> with newer Node). Each app has an `.nvmrc` pinning Node 20 — run `nvm use` (or
+> `nvm install 20`) in the app directory before `npm install` / starting.
 
 ---
 
@@ -191,6 +196,7 @@ To recreate resources without restarting LocalStack, just re-run `./bootstrap.sh
 |---|---|
 | `InvalidParameterException: Invalid parameter: TopicArn` | Topic not created — run `./bootstrap.sh`; confirm the ARN region is `ap-southeast-1`. |
 | `InvalidClientTokenId: security token is invalid` | Missing dummy creds — ensure `.env.local` exists (re-run `./bootstrap.sh`). |
+| `TypeError: ee.on is not a function` on producer start | Running Node 23+. Switch to Node 20: `nvm use` (picks up `.nvmrc`). |
 | Consumer never fires | `serverless offline` does **not** trigger SQS/SNS — you must `serverless deploy` (step 3b). |
 | `License activation failed` / `LocalStack requires an account to run` | 2026.x account gate. Use the pinned community image instead: `docker compose up -d` (step 2a). No token needed for SNS/SQS/Lambda. |
 | Region mismatch warnings | Producer code defaults to `ap-southeast-3` but the ARNs/scripts use `ap-southeast-1`; `.env.local` pins `ap-southeast-1`. Keep everything on `ap-southeast-1`. |
