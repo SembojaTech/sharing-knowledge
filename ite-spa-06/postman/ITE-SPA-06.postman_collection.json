@@ -1,0 +1,235 @@
+{
+  "info": {
+    "name": "ITE-SPA-06 — SNS/SQS API Testing",
+    "description": "Postman collection for the ITE-SPA-06 demo. Maps to the lecture's 'Testing & Evaluation Impact' section:\n\n- Folder 1 (Response-based) demonstrates API-based integration testing: 'response-based -> simple assertion-driven tests'.\n- Folder 2 (Side-effect) demonstrates event-driven integration testing: 'we test not what comes back, but what happens as a result'.\n\nPrereqs: LocalStack up, bootstrap.sh run, producer running on :4000.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/dev" },
+    { "key": "withSqsTopic", "value": "arn:aws:sns:ap-southeast-1:000000000000:WithSQSTopic" },
+    { "key": "withoutSqsTopic", "value": "arn:aws:sns:ap-southeast-1:000000000000:WithoutSQSTopic" },
+    { "key": "queueName", "value": "MyLocalNestJSQueue" },
+    { "key": "lastMessageId", "value": "" },
+    { "key": "baselineMessages", "value": "0" }
+  ],
+  "item": [
+    {
+      "name": "1. Response-based (API integration)",
+      "description": "API-based integration: assert on what the call returns. Run any time — no special setup.",
+      "item": [
+        {
+          "name": "GET /users/hi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('body is \"Hello World!\"', () => {",
+                  "  pm.expect(pm.response.text()).to.eql('Hello World!');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/hi",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "hi"]
+            }
+          }
+        },
+        {
+          "name": "POST /sns/publish (WithSQSTopic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('success is true', () => pm.expect(json.success).to.be.true);",
+                  "pm.test('messageId is present', () => {",
+                  "  pm.expect(json.messageId).to.be.a('string').and.to.have.length.above(0);",
+                  "});",
+                  "if (json.messageId) pm.collectionVariables.set('lastMessageId', json.messageId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Hello from Postman\",\n  \"subject\": \"Postman response-based test\",\n  \"topicArn\": \"{{withSqsTopic}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sns/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "publish"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Side-effect (event-driven)",
+      "description": "Event-driven integration: assert what HAPPENS as a result, not the return value. Run this folder in order (Collection Runner).\n\nPREREQ: take the consumer offline first so the messages stay buffered:\n    ./ite-spa-06/consumer.sh off\nAfter the run, bring it back:\n    ./ite-spa-06/consumer.sh on",
+      "item": [
+        {
+          "name": "0. Baseline queue depth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('baselineMessages', json.messages);",
+                  "console.log('baseline queue depth =', json.messages);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sns/queue-status?queue={{queueName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "queue-status"],
+              "query": [{ "key": "queue", "value": "{{queueName}}" }]
+            }
+          }
+        },
+        {
+          "name": "1. Publish #1 (WithSQSTopic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"side-effect job 1\",\n  \"subject\": \"Postman side-effect test\",\n  \"topicArn\": \"{{withSqsTopic}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sns/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "publish"]
+            }
+          }
+        },
+        {
+          "name": "2. Publish #2 (WithSQSTopic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"side-effect job 2\",\n  \"subject\": \"Postman side-effect test\",\n  \"topicArn\": \"{{withSqsTopic}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sns/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "publish"]
+            }
+          }
+        },
+        {
+          "name": "3. Publish #3 (WithSQSTopic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"side-effect job 3\",\n  \"subject\": \"Postman side-effect test\",\n  \"topicArn\": \"{{withSqsTopic}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sns/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "publish"]
+            }
+          }
+        },
+        {
+          "name": "4. Verify side effect (queue grew by 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const baseline = Number(pm.collectionVariables.get('baselineMessages'));",
+                  "console.log('queue depth now =', json.messages, '(baseline', baseline + ')');",
+                  "pm.test('3 messages were buffered in the queue (side effect)', () => {",
+                  "  pm.expect(json.messages).to.eql(baseline + 3);",
+                  "});",
+                  "// If this fails with messages == baseline, the consumer was ONLINE and drained",
+                  "// the queue. Run ./ite-spa-06/consumer.sh off and re-run this folder."
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sns/queue-status?queue={{queueName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sns", "queue-status"],
+              "query": [{ "key": "queue", "value": "{{queueName}}" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

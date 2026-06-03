@@ -81,6 +81,22 @@ durability — the reason we put SQS between SNS and the worker."
 
 ---
 
+## Act 3 — "Testing the integration" with Postman (≈2 min)
+
+Ties to the **Testing & Evaluation Impact** slide: API-based integration is tested by
+its **response**; event-driven integration is tested by its **side effect**.
+
+Import `ite-spa-06/postman/ITE-SPA-06.postman_collection.json` and run the two folders:
+
+- **Folder 1 — Response-based:** `POST /sns/publish` → asserts `200`, `success`, `messageId`.
+  *"With an API, we assert on what comes back."*
+- **Folder 2 — Side-effect:** with `./ite-spa-06/consumer.sh off`, publish 3 → the
+  `GET /sns/queue-status` assertion proves the queue grew by 3.
+  *"With events, we test not what comes back, but what happens as a result."*
+
+Headless option (projector-friendly): `npx newman run ite-spa-06/postman/ITE-SPA-06.postman_collection.json --delay-request 600`
+(run with the consumer offline). See `ite-spa-06/postman/README.md`.
+
 ## One-liner recap for the slide
 
 | | Without SQS | With SQS |
